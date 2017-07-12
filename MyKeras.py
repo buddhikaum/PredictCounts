@@ -22,21 +22,25 @@ def GenTrainData():
 	#	Y[i,:] = full_Vec[data_len*3/4:data_len]
 	#
 	#return X,Y
-	alldata = np.genfromtxt('xystructured100.txt')
+	alldata = np.genfromtxt('xystructured.txt')
 	n_data = alldata.shape[0]/2
-	n_train = int(n_data*.9*2)
-	print n_train
-	n_test = n_data-n_train
+	n_train = int(n_data*.9)*2
+	print '# Training samples ',n_train/2
+	n_test = n_data*2-n_train
+	print '# Testing samples ',n_test/2
 	Xtemp = alldata[0:n_train,0:Seq_Size]
 	Y = alldata[range(0,n_train,2),Seq_Size]
-	Xtest = alldata[n_train:n_data*2,0:Seq_Size]
+	Xtemp_test = alldata[n_train:n_data*2,0:Seq_Size]
 	Ytest = alldata[range(n_train,n_data*2,2),Seq_Size]
-	X = np.zeros((n_train/2,2,Seq_Size))
+	X = np.zeros((n_train/2,Seq_Size,2))
+	Xtest = np.zeros((n_test/2,Seq_Size,2))
 	#Y = np.zeros((n_train/2,1,1))
 	for i in range(0,n_train/2):
-		print i
-		X[i,0,:] = Xtemp[2*i,:]	
-		X[i,1,:] = Xtemp[2*i+1,:]	
+		X[i,:,0] = Xtemp[2*i,:]	
+		X[i,:,1] = Xtemp[2*i+1,:]	
+	for i in range(0,n_test/2):
+		Xtest[i,:,0] = Xtemp_test[2*i,:]
+		Xtest[i,:,1] = Xtemp_test[2*i+1,:]
 	#print 'Train input \n',X
 	print 'Train input size \n',X.shape
 	#print 'Train output \n',Y
@@ -68,10 +72,12 @@ def GenTestData(data_len):
 #n_samples = 800 # Number of train samples
 #
 model = Sequential()
-model.add(LSTM(1,input_shape=(2,Seq_Size)))
+model.add(LSTM(1,input_shape=(Seq_Size,2),return_sequences=True))
 ##model.add(LSTM(1, input_shape=(1,), activation='tanh',
 ##					recurrent_activation='hard_sigmoid'))
-model.add(Dense(1, activation='sigmoid'))
+model.add(LSTM(Seq_Size))
+model.add(Dense(Seq_Size, activation='sigmoid'))
+model.add(Dense(1, activation='linear'))
 #
 #t = np.linspace(0,2*np.pi,data_len);
 #amp = .4
@@ -79,16 +85,17 @@ model.add(Dense(1, activation='sigmoid'))
 #
 X,Y,Xtest,Ytest = GenTrainData()
 #
-sgd = SGD(lr=0.1, decay=1e-6, momentum=0.9, nesterov=True)
+sgd = SGD(lr=0.01, decay=1e-5, momentum=0.9, nesterov=False)
 model.compile(loss='mean_squared_error', optimizer=sgd)
+#model.compile(loss='mean_absolute_error', optimizer=sgd)
 #
-history = model.fit(X, Y, epochs=100, batch_size=10, verbose=0)
+history = model.fit(X, Y, epochs=500, batch_size=10, verbose=1)
 #
 #y,X_test = GenTestData(data_len)
 ##X = dc+amp*np.sin(t-np.pi/2)/2
-#Op =  model.predict(X_test)
-#print 'True out ',y
-#print 'Predicted out ',Op
+Op =  model.predict(Xtest)
+print 'True out ',Ytest
+print 'Predicted out ',Op
 #output_sin, = plt.plot(t[3*data_len/4:data_len],Op[0,:],label='op')
 #input_sin, = plt.plot(t[3*data_len/4:data_len],y,label='true ')
 #plt.legend(handles=[output_sin, input_sin])
