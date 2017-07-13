@@ -23,8 +23,8 @@ def GenTrainData():
 	#	Y[i,:] = full_Vec[data_len*3/4:data_len]
 	#
 	#return X,Y
-	train_perc=.5
-	alldata = np.genfromtxt('xystructured100.txt')
+	train_perc=.9
+	alldata = np.genfromtxt('xystructured10k.txt')
 	#alldata = alldata - alldata.mean()
 	n_data = alldata.shape[0]/2
 	n_train = int(n_data*train_perc)*2
@@ -86,12 +86,14 @@ def GenTestData(data_len):
 #n_samples = 800 # Number of train samples
 #
 model = Sequential()
-model.add(LSTM(1,input_shape=(Seq_Size,2),activation='tanh',return_sequences=False))
+model.add(LSTM(1,input_shape=(Seq_Size,2),activation='linear',return_sequences=True))
 ##model.add(LSTM(1, input_shape=(1,), activation='tanh',
 ##					recurrent_activation='hard_sigmoid'))
-#model.add(LSTM(Seq_Size))
+model.add(LSTM(Seq_Size,activation='tanh'))
+model.add(Dense(Seq_Size, activation='elu'))
+model.add(Dense(Seq_Size, activation='linear'))
 model.add(Dense(Seq_Size, activation='sigmoid'))
-model.add(Dense(Seq_Size, activation='tanh'))
+model.add(Dense(Seq_Size, activation='linear'))
 model.add(Dense(1, activation='linear'))
 #
 #t = np.linspace(0,2*np.pi,data_len);
@@ -100,13 +102,13 @@ model.add(Dense(1, activation='linear'))
 #
 X,Y,Xtest,Ytest = GenTrainData()
 #
-sgd = SGD(lr=0.0001, decay=1e-5, momentum=0.9, nesterov=False)
+sgd = SGD(lr=0.00001, decay=1e-9, momentum=0.9, nesterov=True)
 model.compile(loss='mean_squared_error', optimizer=sgd)
 #model.compile(loss='mean_absolute_error', optimizer=sgd)
 #
 #print 'Input \n',X
 t1 = time.time()
-history = model.fit(X, Y, epochs=1000, batch_size=100, verbose=1)
+history = model.fit(X, Y, epochs=1000, batch_size=200, verbose=1)
 t2 = time.time()
 print model.get_weights()[0]
 print model.get_weights()[1]
@@ -119,9 +121,11 @@ np.savetxt('loss.txt',history.history['loss'])
 Op =  model.predict(Xtest)
 XX = np.zeros((1,Seq_Size,2))
 #print 'allzeros input ',model.predict(XX)
-print 'True out ',Ytest
-print 'Predicted out ',Op
+#print 'True out \n',Ytest
+#print 'Predicted out \n',Op
 print 'Training time ',t2-t1
+np.savetxt('out.txt',Op)
+np.savetxt('true.txt',Ytest)
 #output_sin, = plt.plot(t[3*data_len/4:data_len],Op[0,:],label='op')
 #input_sin, = plt.plot(t[3*data_len/4:data_len],y,label='true ')
 #plt.legend(handles=[output_sin, input_sin])
