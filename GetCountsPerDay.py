@@ -3,7 +3,7 @@ import sys
 import json
 
 
-SEC_PER_DAY=3600
+SEC_PER_DAY=360
 #SEC_PER_DAY=100 
 
 def main():

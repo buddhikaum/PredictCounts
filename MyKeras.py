@@ -6,13 +6,13 @@ from keras.models import Sequential
 from keras.layers.core import Activation, Dense
 from keras.layers.recurrent import LSTM
 from keras.optimizers import SGD
+from keras.optimizers import RMSprop
 
 #def GenTrainData(data_len,n_samples):
 Seq_Size = 10
 def GenTrainData():
 
-	#dc = .5
-	#X = np.zeros((n_samples,1,3*data_len/4))
+	#dc = .5 #X = np.zeros((n_samples,1,3*data_len/4))
 	#t = np.linspace(0,20*np.pi,data_len);
 	#Y = np.zeros((n_samples,data_len/4))
 	#for i in range(0,n_samples):
@@ -38,30 +38,37 @@ def GenTrainData():
 	X = np.zeros((n_train/2,Seq_Size,2))
 	Xtest = np.zeros((n_test/2,Seq_Size,2))
 	#Y = np.zeros((n_train/2,1,1))
+	ct_sum=0
+	ngh_sum=0
 	for i in range(0,n_train/2):
-		#ct_sum = np.sum(Xtemp[2*i,:])
+		ct_sum += np.sum(Xtemp[2*i,:])
 		X[i,:,0] = Xtemp[2*i,:]
-		#ngh_sum = np.sum(Xtemp[2*i+1,:])
+		ngh_sum += np.sum(Xtemp[2*i+1,:])
 		X[i,:,1] = Xtemp[2*i+1,:]
-	X[:,:,0] -= X[:,:,0].mean()
-	X[:,:,1] -= X[:,:,1].mean()
+	#X[:,:,0] -= X[:,:,0].mean()
+	#X[:,:,1] -= X[:,:,1].mean()
 	for i in range(0,n_test/2):
-		ct_sum = np.sum(Xtemp_test[2*i,:])
+		ct_sum += np.sum(Xtemp_test[2*i,:])
 		Xtest[i,:,0] = Xtemp_test[2*i,:]
-		ngh_sum = np.sum(Xtemp_test[2*i+1,:])
+		ngh_sum += np.sum(Xtemp_test[2*i+1,:])
 		Xtest[i,:,1] = Xtemp_test[2*i+1,:]
-	Xtest[:,:,0] -= Xtest[:,:,0].mean()
-	Xtest[:,:,1] -= Xtest[:,:,1].mean()
-
-	Y -= Y.mean()
-	Ytest -= Ytest.mean()
+	Xtest[:,:,0] -= ct_sum/(n_data*Seq_Size)
+	Xtest[:,:,1] -= ngh_sum/(n_data*Seq_Size)
+	X[:,:,0] -= ct_sum/(n_data*Seq_Size)
+	X[:,:,1] -= ngh_sum/(n_data*Seq_Size)
+	
+	Ymean = np.sum(Y)
+	Ymean += np.sum(Ytest)
+	Y -= Ymean/n_data
+	Ytest -= Ymean/n_data
+	np.savetxt('true.txt',Ytest)
 	#print 'Train input \n',X
 	print 'Train input size \n',X.shape
 	#print 'Train output \n',Y
 	print 'Train output size \n',Y.shape
 	#print 'Test input \n',Xtest
 	#print 'Test output \n',Ytest
-	return X,Y,Xtest,Ytest
+	return X,Y,Xtest,Ytest,Ymean/n_data
 
 
 
@@ -70,7 +77,7 @@ def GenTestData(data_len):
 
 	dc = .5
 	#amp = np.random.rand(1)/2
-	amp = .5
+	amp = .5 
 	X = np.zeros((1,1,3*data_len/4))
 	t = np.linspace(0,20*np.pi,data_len);
 	full_Vec = dc +np.sin(amp*t)/4
@@ -80,53 +87,65 @@ def GenTestData(data_len):
 
 	return y,X
 
-#GenTrainData()
-	
-#data_len = 1024
-#n_samples = 800 # Number of train samples
-#
-model = Sequential()
-model.add(LSTM(1,input_shape=(Seq_Size,2),activation='linear',return_sequences=True))
-##model.add(LSTM(1, input_shape=(1,), activation='tanh',
-##					recurrent_activation='hard_sigmoid'))
-model.add(LSTM(Seq_Size,activation='tanh'))
-model.add(Dense(Seq_Size, activation='elu'))
-model.add(Dense(Seq_Size, activation='linear'))
-model.add(Dense(Seq_Size, activation='sigmoid'))
-model.add(Dense(Seq_Size, activation='linear'))
-model.add(Dense(1, activation='linear'))
-#
-#t = np.linspace(0,2*np.pi,data_len);
-#amp = .4
-#noise_var = .01
-#
-X,Y,Xtest,Ytest = GenTrainData()
-#
-sgd = SGD(lr=0.00001, decay=1e-9, momentum=0.9, nesterov=True)
-model.compile(loss='mean_squared_error', optimizer=sgd)
-#model.compile(loss='mean_absolute_error', optimizer=sgd)
-#
-#print 'Input \n',X
-t1 = time.time()
-history = model.fit(X, Y, epochs=1000, batch_size=200, verbose=1)
-t2 = time.time()
-print model.get_weights()[0]
-print model.get_weights()[1]
-print model.get_weights()[2]
-np.savetxt('loss.txt',history.history['loss'])
-#
-#y,X_test = GenTestData(data_len)
-##X = dc+amp*np.sin(t-np.pi/2)/2
-#print 'test input \n',Xtest
-Op =  model.predict(Xtest)
-XX = np.zeros((1,Seq_Size,2))
-#print 'allzeros input ',model.predict(XX)
-#print 'True out \n',Ytest
-#print 'Predicted out \n',Op
-print 'Training time ',t2-t1
-np.savetxt('out.txt',Op)
-np.savetxt('true.txt',Ytest)
-#output_sin, = plt.plot(t[3*data_len/4:data_len],Op[0,:],label='op')
-#input_sin, = plt.plot(t[3*data_len/4:data_len],y,label='true ')
-#plt.legend(handles=[output_sin, input_sin])
-#plt.show()
+def main():
+	#GenTrainData()
+		
+	#data_len = 1024
+	#n_samples = 800 # Number of train samples
+	#
+	model = Sequential()
+	model.add(LSTM(1,input_shape=(Seq_Size,2),activation='linear',
+							return_sequences=False,use_bias=True
+							#,bias_initializer='ones'
+							,kernel_initializer='random_normal'
+							))
+	##model.add(LSTM(1, input_shape=(1,), activation='tanh',
+	##					recurrent_activation='hard_sigmoid'))
+	#model.add(LSTM(Seq_Size,activation='tanh'))
+	#model.add(Dense(Seq_Size, activation='elu',use_bias=True))
+	#model.add(Dense(Seq_Size, activation='linear'))
+	#model.add(Dense(Seq_Size,input_shape=(Seq_Size,2), activation='sigmoid'))
+	#model.add(Dense(Seq_Size, activation='linear'))
+	#model.add(Dense(1, activation='linear',use_bias=True))
+	#
+	#t = np.linspace(0,2*np.pi,data_len);
+	#amp = .4
+	#noise_var = .01
+	#
+	X,Y,Xtest,Ytest,ymean = GenTrainData()
+	#
+	#sgd = SGD(lr=1e-8, decay=1e-8, momentum=0.9, nesterov=True)
+	rms = RMSprop(lr=0.01,decay=0)
+	model.compile(loss='mean_squared_error', optimizer=rms)
+	#model.compile(loss='mean_absolute_error', optimizer=sgd)
+	#
+	print 'Input shape \n',X.shape
+	t1 = time.time()
+	history = model.fit(X, Y, epochs=100, batch_size=200, verbose=1)
+	t2 = time.time()
+	#print model.get_weights()[0]
+	#print model.get_weights()[1]
+	#print model.get_weights()[2]
+	np.savetxt('loss.txt',history.history['loss'])
+	#
+	#y,X_test = GenTestData(data_len)
+	##X = dc+amp*np.sin(t-np.pi/2)/2
+	#print 'test input \n',Xtest
+	Op =  model.predict(Xtest)
+	XX = np.zeros((1,Seq_Size,2))
+	#print 'allzeros input ',model.predict(XX)
+	#print 'True out \n',Ytest
+	#print 'Predicted out \n',Op
+	print 'Training time ',t2-t1
+	np.savetxt('out.txt',Op)
+	np.savetxt('true.txt',Ytest)
+	print 'er ',np.sum(np.abs(Op[:,0]-Ytest))
+
+	#output_sin, = plt.plot(t[3*data_len/4:data_len],Op[0,:],label='op')
+	#input_sin, = plt.plot(t[3*data_len/4:data_len],y,label='true ')
+	#plt.legend(handles=[output_sin, input_sin])
+	#plt.show()
+
+if __name__== "__main__":
+
+	main()
