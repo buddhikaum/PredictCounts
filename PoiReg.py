@@ -7,6 +7,7 @@ import sklearn.linear_model as lr
 from sklearn.preprocessing import Binarizer as bn
 from keras.models import Sequential
 from keras.layers.core import Activation, Dense
+from keras.layers.recurrent import LSTM
 from keras.optimizers import SGD
 from keras.optimizers import RMSprop
 
@@ -51,9 +52,14 @@ def DLmethod(X,Y,Xtest,Ytest):
 
 
 	model = Sequential()
+	model.add(LSTM(1,input_shape=(Seq_Size,1),activation='linear',
+							return_sequences=False,use_bias=True
+							,bias_initializer='random_normal'
+							,kernel_initializer='random_normal'
+							))
 	#model.add(Dense(Seq_Size,input_shape=(Seq_Size,), activation='linear'))
-	model.add(Dense(1,input_shape=(Seq_Size,),activation='sigmoid',use_bias=True,
-					bias_initializer='zeros',kernel_initializer='zeros'))
+	#model.add(Dense(1,input_shape=(Seq_Size,),activation='sigmoid',use_bias=True,
+	#				bias_initializer='zeros',kernel_initializer='zeros'))
 	#model.add(Dense(Seq_Size, activation='linear'))
 	#model.add(Dense(1, activation='linear',use_bias=True))
 	rms = RMSprop(lr=0.01,decay=1e-5)
@@ -92,14 +98,14 @@ def main():
 		X_test[i,Seq_Size:2*Seq_Size] = Xtest_temp[i,:,1]
 	##print Y+ymean
 	
-	X = np.zeros((X_temp.shape[0],Seq_Size))
+	X = np.zeros((X_temp.shape[0],Seq_Size,1))
 	for i in range(0,X_temp.shape[0]):
-		X[i,0:Seq_Size] = X_temp[i,:,0]
+		X[i,0:Seq_Size,0] = X_temp[i,:,0]
 		#X[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
 		#print X[i,:]
-	X_test = np.zeros((Xtest_temp.shape[0],Seq_Size))
+	X_test = np.zeros((Xtest_temp.shape[0],Seq_Size,1))
 	for i in range(0,Xtest_temp.shape[0]):
-		X_test[i,0:Seq_Size] = Xtest_temp[i,:,0]
+		X_test[i,0:Seq_Size,0] = Xtest_temp[i,:,0]
 		#X_test[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
 
 	#poi_model = Train(X,Y)
