@@ -48,20 +48,15 @@ def Train(X,Y):
 	#np.savetxt('regx3_'+str(int(i))+'.txt',F.params)
 	return poi_model
 
-def DLmethod(X,Y,Xtest,Ytest):
+def DLDense(X,Y,Xtest,Ytest):
 
 
 	model = Sequential()
-	model.add(LSTM(1,input_shape=(Seq_Size,1),activation='linear',
-							return_sequences=False,use_bias=True
-							,bias_initializer='random_normal'
-							,kernel_initializer='random_normal'
-							))
 	#model.add(Dense(Seq_Size,input_shape=(Seq_Size,), activation='linear'))
-	#model.add(Dense(1,input_shape=(Seq_Size,),activation='sigmoid',use_bias=True,
-	#				bias_initializer='zeros',kernel_initializer='zeros'))
+	model.add(Dense(Seq_Size,input_shape=(Seq_Size,),activation='linear',use_bias=True,
+					bias_initializer='zeros',kernel_initializer='zeros'))
 	#model.add(Dense(Seq_Size, activation='linear'))
-	#model.add(Dense(1, activation='linear',use_bias=True))
+	model.add(Dense(1, activation='sigmoid',use_bias=True))
 	rms = RMSprop(lr=0.01,decay=1e-5)
 	sgd = SGD(lr=1e-3, decay=1e-8, momentum=0,nesterov=False)
 	Xperm = np.random.permutation(X.shape[0])
@@ -83,6 +78,61 @@ def DLmethod(X,Y,Xtest,Ytest):
 	np.savetxt('ybinary.txt',ybinary,fmt='%d')
 	print 'er ',np.sum(np.abs(ybinary[:,0]-Ytest))
 
+def DLRNN(X,Y,Xtest,Ytest):
+
+	model = Sequential()
+	model.add(LSTM(1,input_shape=(Seq_Size,1),activation='linear',
+							return_sequences=False,use_bias=True
+							,bias_initializer='random_normal'
+							,kernel_initializer='random_normal'
+							))
+	rms = RMSprop(lr=0.01,decay=1e-5)
+	sgd = SGD(lr=1e-3, decay=1e-8, momentum=0,nesterov=False)
+	Xperm = np.random.permutation(X.shape[0])
+	X = X[Xperm,:]
+	Y = Y[Xperm]
+	model.compile(loss='binary_crossentropy', optimizer=rms)
+	history = model.fit(X, Y, epochs=300, batch_size=3000, verbose=1)
+	np.savetxt('loss.txt',history.history['loss'])
+	print 'all weights ',model.get_weights()
+	#print 'weights ',model.get_weights()[0]
+	yhat = model.predict(Xtest)
+	ybinary = np.zeros(yhat.shape,dtype=int)
+	for k in range(0,yhat.shape[0]):
+		if yhat[k,0]>=.5:
+			ybinary[k,0] =1	
+		else :
+			ybinary[k,0] = 0
+	np.savetxt('yhat.txt',yhat)
+	np.savetxt('ybinary.txt',ybinary,fmt='%d')
+	print 'er ',np.sum(np.abs(ybinary[:,0]-Ytest))
+
+def GetCountsForRNN(X_temp,Xtest_temp):
+
+	X = np.zeros((X_temp.shape[0],Seq_Size,1))
+	for i in range(0,X_temp.shape[0]):
+		X[i,0:Seq_Size,0] = X_temp[i,:,0]
+		#X[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
+		#print X[i,:]
+	X_test = np.zeros((Xtest_temp.shape[0],Seq_Size,1))
+	for i in range(0,Xtest_temp.shape[0]):
+		X_test[i,0:Seq_Size,0] = Xtest_temp[i,:,0]
+		#X_test[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
+	return X,X_test
+
+def GetCountsForDense(X_temp,Xtest_temp):
+
+	X = np.zeros((X_temp.shape[0],Seq_Size))
+	for i in range(0,X_temp.shape[0]):
+		X[i,0:Seq_Size] = X_temp[i,:,0]
+		#X[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
+		#print X[i,:]
+	X_test = np.zeros((Xtest_temp.shape[0],Seq_Size))
+	for i in range(0,Xtest_temp.shape[0]):
+		X_test[i,0:Seq_Size] = Xtest_temp[i,:,0]
+		#X_test[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
+	return X,X_test
+	
 def main():
 
 	X_temp,Y,Xtest_temp,Ytest,ymean = GenTrainData()
@@ -98,16 +148,8 @@ def main():
 		X_test[i,Seq_Size:2*Seq_Size] = Xtest_temp[i,:,1]
 	##print Y+ymean
 	
-	X = np.zeros((X_temp.shape[0],Seq_Size,1))
-	for i in range(0,X_temp.shape[0]):
-		X[i,0:Seq_Size,0] = X_temp[i,:,0]
-		#X[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
-		#print X[i,:]
-	X_test = np.zeros((Xtest_temp.shape[0],Seq_Size,1))
-	for i in range(0,Xtest_temp.shape[0]):
-		X_test[i,0:Seq_Size,0] = Xtest_temp[i,:,0]
-		#X_test[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
-
+	X,X_test = GetCountsForRNN(X_temp,Xtest_temp)
+	#X,X_test = GetCountsForDense(X_temp,Xtest_temp)
 	#poi_model = Train(X,Y)
 	#yhat = poi_model.predict(X_test)
 	#print poi_model.coef_
@@ -119,7 +161,8 @@ def main():
 	#np.savetxt('yhat.txt',yhat)
 	#print np.sum(np.abs(yhat-Ytest))
 
-	DLmethod(X,Y,X_test,Ytest)
+	#DLDense(X,Y,X_test,Ytest)
+	DLRNN(X,Y,X_test,Ytest)
 
 if __name__== "__main__":
 

@@ -25,7 +25,8 @@ def GenTrainData():
 	#return X,Y
 	train_perc=.9
 	#alldata = np.genfromtxt('xystructured10k.txt')
-	alldata = np.genfromtxt('viral10k.txt')
+	#alldata = np.genfromtxt('viral10k.txt')
+	alldata = np.genfromtxt('allviraldata.txt')
 	#alldata = alldata - alldata.mean()
 	n_data = alldata.shape[0]/2
 	n_train = int(n_data*train_perc)*2
@@ -55,6 +56,8 @@ def GenTrainData():
 		Xtest[i,:,0] = Xtemp_test[2*i,:]
 		ngh_sum += np.sum(Xtemp_test[2*i+1,:])
 		Xtest[i,:,1] = Xtemp_test[2*i+1,:]/np.sum(Xtemp_test[2*i+1,:])
+	#ct_sum = np.sum(X[:,:,0])
+	#ct_sum += np.sum(Xtest[:,:,0])
 	Xtest[:,:,0] -= ct_sum/(n_data*Seq_Size)
 	X[:,:,0] -= ct_sum/(n_data*Seq_Size)
 	ngh_sum= np.sum(np.sum(X[:,:,1]))
@@ -63,7 +66,7 @@ def GenTrainData():
 	Xtest[:,:,1] -= ngh_sum/(n_data*Seq_Size)
 	#X[:,:,1] = X[:,:,1]/np.sum(np.sum(X[:,:,1])) 
 	print 'ngh mean ',ngh_sum/(n_data*Seq_Size),'ngh sum ',ngh_sum
-	print X[0:10,:,1]
+	print X[0:10,:,0]
 	#raw_input()
 	
 	Ymean = np.sum(Y)
@@ -103,10 +106,10 @@ def main():
 	#n_samples = 800 # Number of train samples
 	#
 	model = Sequential()
-	model.add(LSTM(1,input_shape=(Seq_Size,2),activation='sigmoid',
+	model.add(LSTM(Seq_Size,input_shape=(Seq_Size,2),activation='linear',
 							return_sequences=False,use_bias=True
-							,bias_initializer='random_normal'
-							,kernel_initializer='random_normal'
+							,bias_initializer='zeros'
+							,kernel_initializer='zeros'
 							))
 	##model.add(LSTM(1, input_shape=(1,), activation='tanh',
 	##					recurrent_activation='hard_sigmoid'))
@@ -115,7 +118,7 @@ def main():
 	#model.add(Dense(Seq_Size, activation='linear'))
 	#model.add(Dense(Seq_Size,input_shape=(Seq_Size,2), activation='sigmoid'))
 	#model.add(Dense(Seq_Size, activation='linear'))
-	#model.add(Dense(1, activation='sigmoid',use_bias=True))
+	model.add(Dense(1, activation='sigmoid',use_bias=True))
 	#
 	#t = np.linspace(0,2*np.pi,data_len);
 	#amp = .4
@@ -124,7 +127,7 @@ def main():
 	X,Y,Xtest,Ytest,ymean = GenTrainData()
 	#
 	sgd = SGD(lr=1e-3, decay=1e-8, momentum=0.9, nesterov=True)
-	rms = RMSprop(lr=0.01,decay=0)
+	rms = RMSprop(lr=0.001,decay=0)
 	model.compile(loss='binary_crossentropy', optimizer=rms)
 	#model.compile(loss='mean_squared_error', optimizer='adam')
 	#model.compile(loss='mean_absolute_error', optimizer=sgd)
@@ -133,9 +136,9 @@ def main():
 	print '# +ve ',np.sum(Y)
 	print 'Y ',Y
 	t1 = time.time()
-	history = model.fit(X, Y, epochs=200, batch_size=400, verbose=1)
+	history = model.fit(X, Y, epochs=250, batch_size=3000, verbose=1)
 	t2 = time.time()
-	print model.get_weights()
+	#print model.get_weights()
 	#print model.get_weights()[1]
 	#print model.get_weights()[2]
 	np.savetxt('loss.txt',history.history['loss'])
