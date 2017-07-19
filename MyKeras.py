@@ -24,7 +24,8 @@ def GenTrainData():
 	#
 	#return X,Y
 	train_perc=.9
-	alldata = np.genfromtxt('xystructured10k.txt')
+	#alldata = np.genfromtxt('xystructured10k.txt')
+	alldata = np.genfromtxt('viral10k.txt')
 	#alldata = alldata - alldata.mean()
 	n_data = alldata.shape[0]/2
 	n_train = int(n_data*train_perc)*2
@@ -44,23 +45,31 @@ def GenTrainData():
 		ct_sum += np.sum(Xtemp[2*i,:])
 		X[i,:,0] = Xtemp[2*i,:]
 		ngh_sum += np.sum(Xtemp[2*i+1,:])
-		X[i,:,1] = Xtemp[2*i+1,:]
+		X[i,:,1] = Xtemp[2*i+1,:]/np.sum(Xtemp[2*i+1,:])
+		#print 'sum ',np.sum(Xtemp[2*i+1,:])
+		#print X[i,:,1]
 	#X[:,:,0] -= X[:,:,0].mean()
 	#X[:,:,1] -= X[:,:,1].mean()
 	for i in range(0,n_test/2):
 		ct_sum += np.sum(Xtemp_test[2*i,:])
 		Xtest[i,:,0] = Xtemp_test[2*i,:]
 		ngh_sum += np.sum(Xtemp_test[2*i+1,:])
-		Xtest[i,:,1] = Xtemp_test[2*i+1,:]
+		Xtest[i,:,1] = Xtemp_test[2*i+1,:]/np.sum(Xtemp_test[2*i+1,:])
 	Xtest[:,:,0] -= ct_sum/(n_data*Seq_Size)
-	Xtest[:,:,1] -= ngh_sum/(n_data*Seq_Size)
 	X[:,:,0] -= ct_sum/(n_data*Seq_Size)
+	ngh_sum= np.sum(np.sum(X[:,:,1]))
+	ngh_sum += np.sum(np.sum(Xtest[:,:,1]))
 	X[:,:,1] -= ngh_sum/(n_data*Seq_Size)
+	Xtest[:,:,1] -= ngh_sum/(n_data*Seq_Size)
+	#X[:,:,1] = X[:,:,1]/np.sum(np.sum(X[:,:,1])) 
+	print 'ngh mean ',ngh_sum/(n_data*Seq_Size),'ngh sum ',ngh_sum
+	print X[0:10,:,1]
+	#raw_input()
 	
 	Ymean = np.sum(Y)
 	Ymean += np.sum(Ytest)
-	Y -= Ymean/n_data
-	Ytest -= Ymean/n_data
+	#Y -= Ymean/n_data
+	#Ytest -= Ymean/n_data
 	np.savetxt('true.txt',Ytest)
 	#print 'Train input \n',X
 	print 'Train input size \n',X.shape
@@ -94,19 +103,19 @@ def main():
 	#n_samples = 800 # Number of train samples
 	#
 	model = Sequential()
-	model.add(LSTM(1,input_shape=(Seq_Size,2),activation='linear',
+	model.add(LSTM(1,input_shape=(Seq_Size,2),activation='sigmoid',
 							return_sequences=False,use_bias=True
-							#,bias_initializer='ones'
+							,bias_initializer='random_normal'
 							,kernel_initializer='random_normal'
 							))
 	##model.add(LSTM(1, input_shape=(1,), activation='tanh',
 	##					recurrent_activation='hard_sigmoid'))
 	#model.add(LSTM(Seq_Size,activation='tanh'))
-	#model.add(Dense(Seq_Size, activation='elu',use_bias=True))
+	#model.add(Dense(Seq_Size, activation='linear',use_bias=True))
 	#model.add(Dense(Seq_Size, activation='linear'))
 	#model.add(Dense(Seq_Size,input_shape=(Seq_Size,2), activation='sigmoid'))
 	#model.add(Dense(Seq_Size, activation='linear'))
-	#model.add(Dense(1, activation='linear',use_bias=True))
+	#model.add(Dense(1, activation='sigmoid',use_bias=True))
 	#
 	#t = np.linspace(0,2*np.pi,data_len);
 	#amp = .4
@@ -114,16 +123,19 @@ def main():
 	#
 	X,Y,Xtest,Ytest,ymean = GenTrainData()
 	#
-	#sgd = SGD(lr=1e-8, decay=1e-8, momentum=0.9, nesterov=True)
+	sgd = SGD(lr=1e-3, decay=1e-8, momentum=0.9, nesterov=True)
 	rms = RMSprop(lr=0.01,decay=0)
-	model.compile(loss='mean_squared_error', optimizer=rms)
+	model.compile(loss='binary_crossentropy', optimizer=rms)
+	#model.compile(loss='mean_squared_error', optimizer='adam')
 	#model.compile(loss='mean_absolute_error', optimizer=sgd)
 	#
 	print 'Input shape \n',X.shape
+	print '# +ve ',np.sum(Y)
+	print 'Y ',Y
 	t1 = time.time()
-	history = model.fit(X, Y, epochs=100, batch_size=200, verbose=1)
+	history = model.fit(X, Y, epochs=200, batch_size=400, verbose=1)
 	t2 = time.time()
-	#print model.get_weights()[0]
+	print model.get_weights()
 	#print model.get_weights()[1]
 	#print model.get_weights()[2]
 	np.savetxt('loss.txt',history.history['loss'])
@@ -131,15 +143,21 @@ def main():
 	#y,X_test = GenTestData(data_len)
 	##X = dc+amp*np.sin(t-np.pi/2)/2
 	#print 'test input \n',Xtest
-	Op =  model.predict(Xtest)
-	XX = np.zeros((1,Seq_Size,2))
+	yhat =  model.predict(Xtest)
+	#XX = np.zeros((1,Seq_Size,2))
+	ybinary = np.zeros(yhat.shape,dtype=int)
+	for k in range(0,yhat.shape[0]):
+		if yhat[k,0]>=.5:
+			ybinary[k,0] =1	
+		else :
+			ybinary[k,0] = 0
+	np.savetxt('yhat.txt',yhat)
+	np.savetxt('ybinary.txt',ybinary,fmt='%d')
 	#print 'allzeros input ',model.predict(XX)
 	#print 'True out \n',Ytest
 	#print 'Predicted out \n',Op
 	print 'Training time ',t2-t1
-	np.savetxt('out.txt',Op)
-	np.savetxt('true.txt',Ytest)
-	print 'er ',np.sum(np.abs(Op[:,0]-Ytest))
+	print 'er ',np.sum(np.abs(ybinary[:,0]-Ytest))
 
 	#output_sin, = plt.plot(t[3*data_len/4:data_len],Op[0,:],label='op')
 	#input_sin, = plt.plot(t[3*data_len/4:data_len],y,label='true ')
