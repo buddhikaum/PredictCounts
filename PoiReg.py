@@ -4,6 +4,7 @@ import sys
 #import statsmodels.discrete.discrete_model as poi
 #import statsmodels.tools.tools as st_tool
 import sklearn.linear_model as lr
+from sklearn.preprocessing import Binarizer as bn
 from keras.models import Sequential
 from keras.layers.core import Activation, Dense
 from keras.optimizers import SGD
@@ -51,7 +52,7 @@ def DLmethod(X,Y,Xtest,Ytest):
 
 	model = Sequential()
 	#model.add(Dense(Seq_Size,input_shape=(Seq_Size,), activation='linear'))
-	model.add(Dense(1,input_shape=(Seq_Size,),activation='linear',use_bias=True,
+	model.add(Dense(1,input_shape=(Seq_Size,),activation='sigmoid',use_bias=True,
 					bias_initializer='zeros',kernel_initializer='zeros'))
 	#model.add(Dense(Seq_Size, activation='linear'))
 	#model.add(Dense(1, activation='linear',use_bias=True))
@@ -60,14 +61,21 @@ def DLmethod(X,Y,Xtest,Ytest):
 	Xperm = np.random.permutation(X.shape[0])
 	X = X[Xperm,:]
 	Y = Y[Xperm]
-	model.compile(loss='mean_squared_error', optimizer=rms)
-	history = model.fit(X, Y, epochs=300, batch_size=100, verbose=1)
+	model.compile(loss='binary_crossentropy', optimizer=rms)
+	history = model.fit(X, Y, epochs=500, batch_size=3000, verbose=1)
 	np.savetxt('loss.txt',history.history['loss'])
 	print 'all weights ',model.get_weights()
 	#print 'weights ',model.get_weights()[0]
-	yhat =  model.predict(Xtest)
+	yhat = model.predict(Xtest)
+	ybinary = np.zeros(yhat.shape,dtype=int)
+	for k in range(0,yhat.shape[0]):
+		if yhat[k,0]>=.5:
+			ybinary[k,0] =1	
+		else :
+			ybinary[k,0] = 0
 	np.savetxt('yhat.txt',yhat)
-	print 'er ',np.sum(np.abs(yhat[:,0]-Ytest))
+	np.savetxt('ybinary.txt',ybinary,fmt='%d')
+	print 'er ',np.sum(np.abs(ybinary[:,0]-Ytest))
 
 def main():
 
@@ -94,18 +102,18 @@ def main():
 		X_test[i,0:Seq_Size] = Xtest_temp[i,:,0]
 		#X_test[i,Seq_Size:2*Seq_Size] = X_temp[i,:,1]
 
-	poi_model = Train(X,Y)
-	yhat = poi_model.predict(X_test)
-	print poi_model.coef_
+	#poi_model = Train(X,Y)
+	#yhat = poi_model.predict(X_test)
+	#print poi_model.coef_
 	#print 'Regression yhat shape ',yhat.shape
 	#for i in range(0,yhat.shape[0]):
 	#	print np.dot(poi_model.coef_,X_test[i,:]),Ytest[i]
 	#	print np.multiply(poi_model.coef_,X_test[i,:])
 	#	print poi_model.coef_,X_test[i,:]
 	#np.savetxt('yhat.txt',yhat)
-	print np.sum(np.abs(yhat-Ytest))
+	#print np.sum(np.abs(yhat-Ytest))
 
-	#DLmethod(X,Y,X_test,Ytest)
+	DLmethod(X,Y,X_test,Ytest)
 
 if __name__== "__main__":
 
