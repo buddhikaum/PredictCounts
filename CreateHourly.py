@@ -1,6 +1,7 @@
 import json
 import numpy as np
 from os.path import expanduser
+import matplotlib.pyplot as plt
 
 
 #To create sequences of 10 hour
@@ -72,8 +73,8 @@ def IsViral():
 def ViralTime():
 
 
-	#for i in rage(0,sortedlist.shape[0]):
-	for i in range(0,1000):
+	for i in range(0,sortedlist.shape[0]):
+	#for i in range(0,1000):
 
 		fp = open(expanduser('~')+'/Desktop/minfiles/'+'min_'+str(sortedlist[i])+'.txt','r')
 		all_xy = json.load(fp)
@@ -108,10 +109,54 @@ def ViralTime():
 					ngh_t = ngh_sum	
 			print len(all_xy),t_min,cnt_10/final_sum,ngh_t/ngh_sum
 
+def PlotTweetCt():
+
+	F = np.genfromtxt('fact_min.txt')
+	bins = np.linspace(0,1000,101)
+	print bins 
+	H = np.histogram(F[:,1],bins)
+	#n,bins,patches = plt.hist(F[:,1],bins)
+	plt.bar(bins[0:100]/10,H[0],width=1,linewidth=2)
+	print H[1].shape
+	print H[0].shape
+	print H[1][1:101].shape
+	print H[0]
+	#plt.plot(H[1][1:101],H[0],'r--')
+	#plt.xlim((0,10))
+	plt.grid(True)
+	#plt.xlabel('Hours from initial Tweet')
+	plt.xlabel('Time taken to reach half of the total Retweets (hours)')
+	plt.ylabel('Number of Tweets')
+	#plt.title('Number of Different Tweets against time taken to reach half of the to')
+	plt.show()
+
+def PlotNeighCt():
+
+	F = np.genfromtxt('fact_min.txt')
+	bins = np.linspace(0,1,11)
+	print bins 
+	H = np.histogram(F[:,3],bins)
+	#n,bins,patches = plt.hist(F[:,1],bins)
+	plt.bar(bins[0:10],H[0],width=.1,linewidth=2)
+	print H[1].shape
+	print H[0].shape
+	print H[1][1:101].shape
+	print H[0]
+	print np.sum(H[0])
+	#plt.plot(H[1][1:101],H[0],'r--')
+	#plt.xlim((0,10))
+	plt.grid(True)
+	#plt.xlabel('Hours from initial Tweet')
+	plt.xlabel('Ratio between sum of the followers at half way and sum of followers at the end')
+	plt.ylabel('Number of Tweets')
+	plt.title('Number of Different Tweets against the fraction of user that saw the tweet at half way')
+	plt.show()
 def main():
 
-	IsViral()
+	#IsViral()
 	#ViralTime()
+	PlotTweetCt()
+	#PlotNeighCt()
 
 
 if __name__== "__main__":
