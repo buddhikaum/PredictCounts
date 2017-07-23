@@ -111,6 +111,7 @@ def ViralTime():
 
 def PlotTweetCt():
 
+	plt.figure(1)
 	F = np.genfromtxt('fact_min.txt')
 	bins = np.linspace(0,1000,101)
 	print bins 
@@ -121,6 +122,7 @@ def PlotTweetCt():
 	print H[0].shape
 	print H[1][1:101].shape
 	print H[0]
+	print np.sum(H[0])
 	#plt.plot(H[1][1:101],H[0],'r--')
 	#plt.xlim((0,10))
 	plt.grid(True)
@@ -128,10 +130,12 @@ def PlotTweetCt():
 	plt.xlabel('Time taken to reach half of the total Retweets (hours)')
 	plt.ylabel('Number of Tweets')
 	#plt.title('Number of Different Tweets against time taken to reach half of the to')
-	plt.show()
+	#plt.draw()
+	plt.show(block=False)
 
 def PlotNeighCt():
 
+	plt.figure(2)
 	F = np.genfromtxt('fact_min.txt')
 	bins = np.linspace(0,1,11)
 	print bins 
@@ -150,13 +154,16 @@ def PlotNeighCt():
 	plt.xlabel('Ratio between sum of the followers at half way and sum of followers at the end')
 	plt.ylabel('Number of Tweets')
 	plt.title('Number of Different Tweets against the fraction of user that saw the tweet at half way')
-	plt.show()
+	#plt.draw()
+	plt.show(block=False)
 def main():
 
 	#IsViral()
 	#ViralTime()
 	PlotTweetCt()
-	#PlotNeighCt()
+	PlotNeighCt()
+	print ' Enter any key to exit '
+	raw_input()
 
 
 if __name__== "__main__":
